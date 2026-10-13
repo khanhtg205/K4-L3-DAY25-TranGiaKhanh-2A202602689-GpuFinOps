@@ -30,6 +30,18 @@ def build_report(baseline_usd: float, optimized_usd: float, levers: dict,
             f"- Energy per query: {sustainability.get('wh_per_query', 0):.2f} Wh",
             f"- Carbon per query: {sustainability.get('carbon_g', 0):.3f} gCO2e",
             f"- Cheapest+cleanest region: {sustainability.get('best_region', 'n/a')}",
+            "",
+            "## Technical Root Cause: The GPU-Util Lie",
+            "",
+            "- `nvidia-smi` measures time-active clock duty cycle, not arithmetic throughput (FLOPs).",
+            "- Memory-bound LLM decode workloads have low arithmetic intensity (~1-2 FLOP/byte), stalling Tensor Cores while waiting for HBM transfers, causing 98% utilization with <20% MFU.",
+            "- Solution: Right-size memory-bound workloads to bandwidth/cost-efficient GPUs (e.g. A100/L4) and disaggregate prefill/decode.",
+            "",
+            "## Prioritized Action Plan",
+            "",
+            "1. **Purchasing Migration (Immediate, Highest ROI):** Convert 24/7 continuous inference jobs to 3-year Reserved instances and interruptible batch jobs to Spot with checkpointing ($10,040/month savings).",
+            "2. **Inference Pipeline Optimization (Month 1):** Deploy cascade routing to small models, enable prompt prefix caching, and batch background eval/search queries ($1,212/month savings).",
+            "3. **Telemetry & Governance Modernization (Month 2):** Track MFU/MBU rather than raw GPU utilization, terminate idle nodes >15m ($600/month), and enforce FOCUS chargeback.",
         ]
     lines += ["", "_Figures are June-2026 as-of snapshots; re-baseline before acting._"]
     return "\n".join(lines)

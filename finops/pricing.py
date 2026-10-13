@@ -60,6 +60,37 @@ def break_even_utilization(discount_frac: float) -> float:
     return max(0.0, min(1.0, 1.0 - discount_frac))
 
 
+def cache_break_even_reads(
+    write_cost_per_m: float,
+    read_base_cost_per_m: float,
+    read_discount: float = 0.10,
+) -> float:
+    """Return the exact number of cache hits needed to amortize cache creation.
+    
+    Example: If write is $3.75/1M, base read is $3.00/1M with 90% discount (saves $2.70/read):
+    Break-even = 3.75 / 2.70 = ~1.39 reads.
+    """
+    savings_per_read = (1.0 - read_discount) * read_base_cost_per_m
+    if savings_per_read <= 0:
+        return float("inf")
+    return round(write_cost_per_m / savings_per_read, 2)
+
+
+def cache_is_worth_it(
+    avg_cache_reads: float,
+    write_cost_per_m: float = 3.75,
+    read_base_cost_per_m: float = 3.0,
+    read_discount: float = 0.10,
+) -> bool:
+    """Evaluate whether prompt prefix caching is financially net-positive.
+    
+    Cache write incurs write_cost_per_m; each cache hit saves (1.0 - read_discount) x base.
+    Returns True if avg_cache_reads >= break-even reads.
+    """
+    be = cache_break_even_reads(write_cost_per_m, read_base_cost_per_m, read_discount)
+    return avg_cache_reads >= be
+
+
 def recommend_tier(hours_per_day: float, interruptible: bool, reserved_discount: float = 0.45) -> str:
     """Pick a purchasing tier from a workload's duty cycle + interruptibility.
 
